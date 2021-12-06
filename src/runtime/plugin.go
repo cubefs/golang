@@ -78,8 +78,7 @@ func plugin_lastmoduleinit() (path string, syms map[string]interface{}, errstr s
 	// a dependency on the reflect package.
 	syms = make(map[string]interface{}, len(md.ptab))
 	for _, ptab := range md.ptab {
-		symName := resolveNameOff(unsafe.Pointer(md.types), ptab.name)
-		t := (*_type)(unsafe.Pointer(md.types)).typeOff(ptab.typ)
+		symName, t := ptab.name, ptab.typ
 		var val interface{}
 		valp := (*[2]unsafe.Pointer)(unsafe.Pointer(&val))
 		(*valp)[0] = unsafe.Pointer(t)
@@ -132,6 +131,6 @@ func inRange(r0, r1, v0, v1 uintptr) bool {
 // and global variable in the main package of a plugin. It is used to
 // initialize the plugin module's symbol map.
 type ptabEntry struct {
-	name nameOff
-	typ  typeOff
+	name name
+	typ  *_type
 }

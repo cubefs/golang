@@ -712,7 +712,7 @@ func (ctxt *Link) symtab(pcln *pclntab) []sym.SymKind {
 		if ldr.SymType(ptab) != sym.SRODATA {
 			panic(fmt.Sprintf("go.plugin.tabs is %v, not SRODATA", ldr.SymType(ptab)))
 		}
-		nentries := uint64(len(ldr.Data(ptab)) / 8) // sizeof(nameOff) + sizeof(typeOff)
+		nentries := uint64(len(ldr.Data(ptab)) / (2 * ctxt.Arch.PtrSize)) // sizeof(nameOff) + sizeof(typeOff)
 		moduledata.AddAddr(ctxt.Arch, ptab)
 		moduledata.AddUint(ctxt.Arch, nentries)
 		moduledata.AddUint(ctxt.Arch, nentries)
@@ -727,8 +727,12 @@ func (ctxt *Link) symtab(pcln *pclntab) []sym.SymKind {
 		pkghashes := ldr.CreateSymForUpdate("go.link.pkghashes", 0)
 		pkghashes.SetLocal(true)
 		pkghashes.SetType(sym.SRODATA)
-
+		var shlibs uint64
 		for i, l := range ctxt.Library {
+			if ctxt.linkShared && l.Shlib != "" {
+				shlibs++
+				continue
+			}
 			// pkghashes[i].name
 			addgostring(ctxt, ldr, pkghashes, fmt.Sprintf("go.link.pkgname.%d", i), l.Pkg)
 			// pkghashes[i].linktimehash
@@ -738,8 +742,8 @@ func (ctxt *Link) symtab(pcln *pclntab) []sym.SymKind {
 			pkghashes.AddAddr(ctxt.Arch, hash)
 		}
 		moduledata.AddAddr(ctxt.Arch, pkghashes.Sym())
-		moduledata.AddUint(ctxt.Arch, uint64(len(ctxt.Library)))
-		moduledata.AddUint(ctxt.Arch, uint64(len(ctxt.Library)))
+		moduledata.AddUint(ctxt.Arch, uint64(len(ctxt.Library))-shlibs)
+		moduledata.AddUint(ctxt.Arch, uint64(len(ctxt.Library))-shlibs)
 	} else {
 		moduledata.AddUint(ctxt.Arch, 0) // pluginpath
 		moduledata.AddUint(ctxt.Arch, 0)

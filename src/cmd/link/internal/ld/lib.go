@@ -550,7 +550,7 @@ func (ctxt *Link) loadlib() {
 
 	// Plugins a require cgo support to function. Similarly, plugins may require additional
 	// internal linker support on some platforms which may not be implemented.
-	ctxt.canUsePlugins = ctxt.LibraryByPkg["plugin"] != nil && iscgo
+	ctxt.canUsePlugins = ctxt.LibraryByPkg["plugin"] != nil && iscgo || ctxt.PackageShlib["plugin"] != ""
 
 	// We now have enough information to determine the link mode.
 	determineLinkMode(ctxt)

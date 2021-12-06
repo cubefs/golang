@@ -1379,18 +1379,18 @@ func WriteTabs() {
 		for _, p := range ptabs {
 			// Dump ptab symbol into go.pluginsym package.
 			//
-			// type ptab struct {
-			//	name nameOff
-			//	typ  typeOff // pointer to symbol
-			// }
+			// type ptabEntry struct {
+			//	name name
+			//	typ  *_type
+			//}
 			nsym := dname(p.Sym().Name, "", nil, true)
 			t := p.Type()
 			if p.Class != ir.PFUNC {
 				t = types.NewPtr(t)
 			}
 			tsym := writeType(t)
-			ot = objw.SymPtrOff(s, ot, nsym)
-			ot = objw.SymPtrOff(s, ot, tsym)
+			ot = objw.SymPtr(s, ot, nsym, 0)
+			ot = objw.SymPtr(s, ot, tsym, 0)
 			// Plugin exports symbols as interfaces. Mark their types
 			// as UsedInIface.
 			tsym.Set(obj.AttrUsedInIface, true)

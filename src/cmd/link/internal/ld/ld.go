@@ -253,8 +253,12 @@ func PrepareAddmoduledata(ctxt *Link) (*loader.SymbolBuilder, loader.Sym) {
 	ctxt.loader.SetAttrLocal(ifs, true)
 	initfunc.SetType(sym.STEXT)
 
+	if ctxt.BuildMode == BuildModePlugin && ctxt.linkShared {
+		ambd := ctxt.loader.MakeSymbolUpdater(amd)
+		ambd.SetType(sym.SDYNIMPORT)
+	}
 	// Add the init func and/or addmoduledata to Textp.
-	if ctxt.BuildMode == BuildModePlugin {
+	if ctxt.BuildMode == BuildModePlugin && !ctxt.linkShared {
 		ctxt.Textp = append(ctxt.Textp, amd)
 	}
 	ctxt.Textp = append(ctxt.Textp, initfunc.Sym())
