@@ -234,7 +234,7 @@ func atolwhex(s string) int64 {
 // linking a module that contains the runtime) the returned builder
 // will be nil.
 func PrepareAddmoduledata(ctxt *Link) (*loader.SymbolBuilder, loader.Sym) {
-	if !ctxt.DynlinkingGo() {
+	if !ctxt.DynlinkingGo() || *FlagNoModuleData {
 		return nil, 0
 	}
 	amd := ctxt.loader.LookupOrCreateSym("runtime.addmoduledata", 0)

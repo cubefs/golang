@@ -744,7 +744,7 @@ func (ctxt *Link) linksetup() {
 
 	var moduledata loader.Sym
 	var mdsb *loader.SymbolBuilder
-	if ctxt.BuildMode == BuildModePlugin {
+	if ctxt.BuildMode == BuildModePlugin && !(*FlagNoModuleData) {
 		moduledata = ctxt.loader.LookupOrCreateSym("local.pluginmoduledata", 0)
 		mdsb = ctxt.loader.MakeSymbolUpdater(moduledata)
 		ctxt.loader.SetAttrLocal(moduledata, true)
