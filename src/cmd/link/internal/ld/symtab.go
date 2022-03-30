@@ -431,7 +431,7 @@ func (ctxt *Link) symtab(pcln *pclntab) []sym.SymKind {
 
 	if !ctxt.IsAIX() {
 		switch ctxt.BuildMode {
-		case BuildModeCArchive, BuildModeCShared:
+		case BuildModeCArchive, BuildModeCShared, BuildModePlugin:
 			s := ldr.Lookup(*flagEntrySymbol, sym.SymVerABI0)
 			if s != 0 {
 				addinitarrdata(ctxt, ldr, s)
