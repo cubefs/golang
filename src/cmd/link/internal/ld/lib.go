@@ -400,11 +400,11 @@ func libinit(ctxt *Link) {
 
 	if *flagEntrySymbol == "" {
 		switch ctxt.BuildMode {
-		case BuildModeCShared, BuildModeCArchive:
+		case BuildModeCShared, BuildModeCArchive, BuildModePlugin:
 			*flagEntrySymbol = fmt.Sprintf("_rt0_%s_%s_lib", buildcfg.GOARCH, buildcfg.GOOS)
 		case BuildModeExe, BuildModePIE:
 			*flagEntrySymbol = fmt.Sprintf("_rt0_%s_%s", buildcfg.GOARCH, buildcfg.GOOS)
-		case BuildModeShared, BuildModePlugin:
+		case BuildModeShared:
 			// No *flagEntrySymbol for -buildmode=shared and plugin
 		default:
 			Errorf(nil, "unknown *flagEntrySymbol for buildmode %v", ctxt.BuildMode)
@@ -680,7 +680,7 @@ func (ctxt *Link) loadcgodirectives() {
 // This version works with loader.Loader.
 func (ctxt *Link) linksetup() {
 	switch ctxt.BuildMode {
-	case BuildModeCShared, BuildModePlugin:
+	case BuildModeCShared, BuildModePlugin, BuildModeShared:
 		symIdx := ctxt.loader.LookupOrCreateSym("runtime.islibrary", 0)
 		sb := ctxt.loader.MakeSymbolUpdater(symIdx)
 		sb.SetType(sym.SNOPTRDATA)
@@ -1349,7 +1349,7 @@ func (ctxt *Link) hostlink() {
 			} else {
 				// Pass -z nodelete to mark the shared library as
 				// non-closeable: a dlclose will do nothing.
-				argv = append(argv, "-Wl,-z,nodelete")
+				// argv = append(argv, "-Wl,-z,nodelete")
 				// Only pass Bsymbolic on non-Windows.
 				argv = append(argv, "-Wl,-Bsymbolic")
 			}
