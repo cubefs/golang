@@ -98,6 +98,8 @@ var (
 	memprofilerate    = flag.Int64("memprofilerate", 0, "set runtime.MemProfileRate to `rate`")
 	benchmarkFlag     = flag.String("benchmark", "", "set to 'mem' or 'cpu' to enable phase benchmarking")
 	benchmarkFileFlag = flag.String("benchmarkprofile", "", "emit phase profiles to `base`_phase.{cpu,mem}prof")
+
+	FlagNoModuleData = flag.Bool("nomoduledata", false, "dump symbol table")
 )
 
 // Main is the main entry point for the linker code.

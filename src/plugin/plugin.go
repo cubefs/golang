@@ -23,6 +23,7 @@ type Plugin struct {
 	err        string        // set if plugin failed to load
 	loaded     chan struct{} // closed when loaded
 	syms       map[string]interface{}
+	handle     uint64
 }
 
 // Open opens a Go plugin.
@@ -38,6 +39,10 @@ func Open(path string) (*Plugin, error) {
 // It is safe for concurrent use by multiple goroutines.
 func (p *Plugin) Lookup(symName string) (Symbol, error) {
 	return lookup(p, symName)
+}
+
+func (p *Plugin) Close() error {
+	return closePlug(p.handle)
 }
 
 // A Symbol is a pointer to a variable or function.

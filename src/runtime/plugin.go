@@ -27,10 +27,10 @@ func plugin_lastmoduleinit() (path string, syms map[string]interface{}, errstr s
 	}
 
 	for _, pmd := range activeModules() {
-		if pmd.pluginpath == md.pluginpath {
-			md.bad = true
-			return "", nil, "plugin already loaded"
-		}
+		//if pmd.pluginpath == md.pluginpath {
+		//	md.bad = true
+		//	return "", nil, "plugin already loaded"
+		//}
 
 		if inRange(pmd.text, pmd.etext, md.text, md.etext) ||
 			inRange(pmd.bss, pmd.ebss, md.bss, md.ebss) ||
@@ -49,7 +49,7 @@ func plugin_lastmoduleinit() (path string, syms map[string]interface{}, errstr s
 		}
 	}
 	for _, pkghash := range md.pkghashes {
-		if pkghash.linktimehash != *pkghash.runtimehash {
+		if pkghash.linktimehash != *pkghash.runtimehash && pkghash.modulename != "main" {
 			md.bad = true
 			return "", nil, "plugin was built with a different version of package " + pkghash.modulename
 		}
@@ -120,6 +120,49 @@ func pluginftabverify(md *moduledata) {
 	if badtable {
 		throw("runtime: plugin has bad symbol table")
 	}
+}
+
+//go:linkname RemoveLastModuleitabs plugin.removeLastModuleitabs
+func RemoveLastModuleitabs() {
+	var module *moduledata = nil
+	for pmd := &firstmoduledata; pmd != nil; pmd = pmd.next {
+		if pmd.bad {
+			continue
+		}
+		module = pmd
+	}
+	lock(&itabLock)
+	defer unlock(&itabLock)
+	const PtrSize = 4 << (^uintptr(0) >> 63)
+	for i := uintptr(0); i < itabTable.size; i++ {
+		p := (**itab)(add(unsafe.Pointer(&itabTable.entries), i*PtrSize))
+		m := (*itab)(*(*unsafe.Pointer)(unsafe.Pointer(p)))
+		if m != nil {
+			uintptrm := uintptr(unsafe.Pointer(m))
+			inter := uintptr(unsafe.Pointer(m.inter))
+			_type := uintptr(unsafe.Pointer(m._type))
+			if (inter >= module.types && inter <= module.etypes) || (_type >= module.types && _type <= module.etypes) ||
+				(uintptrm >= module.types && uintptrm <= module.etypes) {
+				atomicstorep(unsafe.Pointer(p), unsafe.Pointer(nil))
+				itabTable.count = itabTable.count - 1
+			}
+		}
+	}
+	return
+}
+
+//go:linkname RemoveLastModule plugin.removeLastModule
+func RemoveLastModule() {
+	var pre *moduledata
+	for pmd := &firstmoduledata; pmd.next != nil; pmd = pmd.next {
+		if pmd.bad {
+			continue
+		}
+		pre = pmd
+	}
+	pre.next = nil
+	lastmoduledatap = pre
+	modulesinit()
 }
 
 // inRange reports whether v0 or v1 are in the range [r0, r1].

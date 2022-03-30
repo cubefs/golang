@@ -431,7 +431,7 @@ func (ctxt *Link) symtab(pcln *pclntab) []sym.SymKind {
 
 	if !ctxt.IsAIX() {
 		switch ctxt.BuildMode {
-		case BuildModeCArchive, BuildModeCShared:
+		case BuildModeCArchive, BuildModeCShared, BuildModePlugin:
 			s := ldr.Lookup(*flagEntrySymbol, sym.SymVerABI0)
 			if s != 0 {
 				addinitarrdata(ctxt, ldr, s)
@@ -618,6 +618,16 @@ func (ctxt *Link) symtab(pcln *pclntab) []sym.SymKind {
 			str.SetType(sym.SRODATA)
 			str.AddAddr(ctxt.Arch, s.Sym())
 			str.AddUint(ctxt.Arch, uint64(len(l.Fingerprint)))
+		}
+	}
+
+	if ctxt.linkShared {
+		sb := ldr.CreateSymForUpdate("ISEXE", 0)
+		sb.SetType(sym.SRODATA)
+		if ctxt.BuildMode == BuildModeExe {
+			sb.AddUint8(1)
+		} else {
+			sb.AddUint8(0)
 		}
 	}
 

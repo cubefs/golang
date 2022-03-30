@@ -132,6 +132,9 @@ var main_init_done chan bool
 //go:linkname main_main main.main
 func main_main()
 
+//go:linkname usedForExe ISEXE
+var usedForExe bool
+
 // mainStarted indicates that the main M has started.
 var mainStarted bool
 
@@ -249,7 +252,9 @@ func main() {
 	if isarchive || islibrary {
 		// A program compiled with -buildmode=c-archive or c-shared
 		// has a main, but it is not executed.
-		return
+		if !usedForExe {
+			return
+		}
 	}
 	fn := main_main // make an indirect call, as the linker doesn't know the address of the main package when laying down the runtime
 	fn()

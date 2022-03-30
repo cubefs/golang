@@ -31,6 +31,13 @@ static void* pluginLookup(uintptr_t h, const char* name, char** err) {
 	}
 	return r;
 }
+
+static void pluginClose(uintptr_t h, char** err) {
+    dlclose((void*)h);
+    *err = (char*)dlerror();
+    return;
+}
+
 */
 import "C"
 
@@ -89,6 +96,7 @@ func open(name string) (*Plugin, error) {
 	p := &Plugin{
 		pluginpath: pluginpath,
 		loaded:     make(chan struct{}),
+		handle:     uint64(h),
 	}
 	plugins[filepath] = p
 	pluginsMu.Unlock()
@@ -142,6 +150,17 @@ func lookup(p *Plugin, symName string) (Symbol, error) {
 	return nil, errors.New("plugin: symbol " + symName + " not found in plugin " + p.pluginpath)
 }
 
+func closePlug(h uint32) error {
+	removeLastModuleitabs()
+	removeLastModule()
+	var cErr *C.char
+	C.pluginClose(C.ulong(h), &cErr)
+	if cErr != nil {
+		return errors.New("closePlug: " + C.GoString(cErr))
+	}
+	return nil
+}
+
 var (
 	pluginsMu sync.Mutex
 	plugins   map[string]*Plugin
@@ -149,6 +168,8 @@ var (
 
 // lastmoduleinit is defined in package runtime
 func lastmoduleinit() (pluginpath string, syms map[string]interface{}, errstr string)
+func removeLastModuleitabs()
+func removeLastModule()
 
 // doInit is defined in package runtime
 //go:linkname doInit runtime.doInit

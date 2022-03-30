@@ -600,7 +600,8 @@ func pluginPath(a *Action) string {
 		}
 		h.Write(data)
 	}
-	return fmt.Sprintf("plugin/unnamed-%x", h.Sum(nil))
+	//return fmt.Sprintf("plugin/unnamed-%x", h.Sum(nil))
+	return "main"
 }
 
 func (gcToolchain) ld(b *Builder, root *Action, out, importcfg, mainpkg string) error {
