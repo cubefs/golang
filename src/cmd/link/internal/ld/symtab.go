@@ -621,6 +621,16 @@ func (ctxt *Link) symtab(pcln *pclntab) []sym.SymKind {
 		}
 	}
 
+	if ctxt.linkShared {
+		sb := ldr.CreateSymForUpdate("ISEXE", 0)
+		sb.SetType(sym.SRODATA)
+		if ctxt.BuildMode == BuildModeExe {
+			sb.AddUint8(1)
+		} else {
+			sb.AddUint8(0)
+		}
+	}
+
 	textsectionmapSym, nsections := textsectionmap(ctxt)
 
 	// Information about the layout of the executable image for the
