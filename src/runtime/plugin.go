@@ -122,7 +122,8 @@ func pluginftabverify(md *moduledata) {
 	}
 }
 
-func RemoveLastModuleitabs() bool {
+//go:linkname RemoveLastModuleitabs plugin.removeLastModuleitabs
+func RemoveLastModuleitabs() {
 	var module *moduledata = nil
 	for pmd := &firstmoduledata; pmd != nil; pmd = pmd.next {
 		if pmd.bad {
@@ -147,9 +148,10 @@ func RemoveLastModuleitabs() bool {
 			}
 		}
 	}
-	return true
+	return
 }
 
+//go:linkname RemoveLastModule plugin.removeLastModule
 func RemoveLastModule() {
 	var pre *moduledata
 	for pmd := &firstmoduledata; pmd.next != nil; pmd = pmd.next {
