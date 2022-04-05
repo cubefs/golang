@@ -219,6 +219,10 @@ func (st *relocSymState) relocsym(s loader.Sym, P []byte) {
 		if rs != 0 && (rst == sym.Sxxx || rst == sym.SXREF) {
 			// When putting the runtime but not main into a shared library
 			// these symbols are undefined and that's OK.
+			if target.IsShared() && ldr.SymName(rs) == "ISEXE" {
+				sb := ldr.MakeSymbolUpdater(rs)
+				sb.SetType(sym.SDYNIMPORT)
+			}
 			if target.IsShared() || target.IsPlugin() {
 				if ldr.SymName(rs) == "main.main" || (!target.IsPlugin() && ldr.SymName(rs) == "main..inittask") {
 					sb := ldr.MakeSymbolUpdater(rs)
