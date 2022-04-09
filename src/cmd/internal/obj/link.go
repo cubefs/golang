@@ -892,6 +892,7 @@ type Link struct {
 	DiagFlush          func()
 	DebugInfo          func(fn *LSym, info *LSym, curfn interface{}) ([]dwarf.Scope, dwarf.InlCalls) // if non-nil, curfn is a *gc.Node
 	GenAbstractFunc    func(fn *LSym)
+	LookupDwPredefined func(name string) dwarf.Type
 	Errors             int
 
 	InParallel    bool // parallel backend phase in effect
@@ -927,6 +928,8 @@ type Link struct {
 	hasheddefs   []*LSym // list of defined hashed (content-addressable) symbols
 	nonpkgdefs   []*LSym // list of defined non-package symbols
 	nonpkgrefs   []*LSym // list of referenced non-package symbols
+
+	dwtypes dwarf.DWDie
 
 	Fingerprint goobj.FingerprintType // fingerprint of symbol indices, to catch index mismatch
 }

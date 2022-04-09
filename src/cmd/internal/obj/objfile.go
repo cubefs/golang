@@ -743,7 +743,8 @@ func writeAuxSymDebug(ctxt *Link, par *LSym, aux *LSym) {
 		aux.Type != objabi.SDWARFFCN &&
 		aux.Type != objabi.SDWARFABSFCN &&
 		aux.Type != objabi.SDWARFLINES &&
-		aux.Type != objabi.SDWARFRANGE {
+		aux.Type != objabi.SDWARFRANGE &&
+		aux.Type != objabi.SDWARFTYPE {
 		return
 	}
 	ctxt.writeSymDebugNamed(aux, "aux for "+par.Name)

@@ -229,8 +229,7 @@ func buildModeInit() {
 				"-linkshared")
 			codegenArg = "-dynlink"
 			forcedGcflags = append(forcedGcflags, "-linkshared")
-			// TODO(mwhudson): remove -w when that gets fixed in linker.
-			forcedLdflags = append(forcedLdflags, "-linkshared", "-w")
+			forcedLdflags = append(forcedLdflags, "-linkshared")
 		}
 	}
 	if codegenArg != "" {

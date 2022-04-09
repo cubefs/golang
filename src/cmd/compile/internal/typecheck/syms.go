@@ -24,7 +24,8 @@ func LookupRuntime(name string) *ir.Name {
 // successive occurrences of the "any" placeholder in the
 // type syntax expression n.Type.
 // The result of SubstArgTypes MUST be assigned back to old, e.g.
-// 	n.Left = SubstArgTypes(n.Left, t1, t2)
+//
+//	n.Left = SubstArgTypes(n.Left, t1, t2)
 func SubstArgTypes(old *ir.Name, types_ ...*types.Type) *ir.Name {
 	for _, t := range types_ {
 		types.CalcSize(t)
@@ -78,6 +79,14 @@ func InitRuntime() {
 			importfunc(ir.Pkgs.Runtime, src.NoXPos, sym, typ)
 		case varTag:
 			importvar(ir.Pkgs.Runtime, src.NoXPos, sym, typ)
+		case typeTag:
+			if sym.PkgDef() != nil {
+				// already imported in runtimeTypes()
+				continue
+			}
+			n := importtype(ir.Pkgs.Runtime, src.NoXPos, sym)
+			n.Type().SetUnderlying(typ)
+			types.CalcSize(n.Type())
 		default:
 			base.Fatalf("unhandled declaration tag %v", d.tag)
 		}

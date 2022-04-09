@@ -73,25 +73,6 @@ func decodetypeHasUncommon(arch *sys.Arch, p []byte) bool {
 	return p[2*arch.PtrSize+4]&tflagUncommon != 0
 }
 
-// Type.FuncType.dotdotdot
-func decodetypeFuncDotdotdot(arch *sys.Arch, p []byte) bool {
-	return uint16(decodeInuxi(arch, p[commonsize(arch)+2:], 2))&(1<<15) != 0
-}
-
-// Type.FuncType.inCount
-func decodetypeFuncInCount(arch *sys.Arch, p []byte) int {
-	return int(decodeInuxi(arch, p[commonsize(arch):], 2))
-}
-
-func decodetypeFuncOutCount(arch *sys.Arch, p []byte) int {
-	return int(uint16(decodeInuxi(arch, p[commonsize(arch)+2:], 2)) & (1<<15 - 1))
-}
-
-// InterfaceType.methods.length
-func decodetypeIfaceMethodCount(arch *sys.Arch, p []byte) int64 {
-	return int64(decodeInuxi(arch, p[commonsize(arch)+2*arch.PtrSize:], arch.PtrSize))
-}
-
 // Matches runtime/typekind.go and reflect.Kind.
 const (
 	kindArray     = 17
@@ -129,84 +110,6 @@ func decodetypeName(ldr *loader.Loader, symIdx loader.Sym, relocs *loader.Relocs
 	data := ldr.Data(r)
 	nameLen, nameLenLen := binary.Uvarint(data[1:])
 	return string(data[1+nameLenLen : 1+nameLenLen+int(nameLen)])
-}
-
-func decodetypeFuncInType(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym, relocs *loader.Relocs, i int) loader.Sym {
-	uadd := commonsize(arch) + 4
-	if arch.PtrSize == 8 {
-		uadd += 4
-	}
-	if decodetypeHasUncommon(arch, ldr.Data(symIdx)) {
-		uadd += uncommonSize()
-	}
-	return decodeRelocSym(ldr, symIdx, relocs, int32(uadd+i*arch.PtrSize))
-}
-
-func decodetypeFuncOutType(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym, relocs *loader.Relocs, i int) loader.Sym {
-	return decodetypeFuncInType(ldr, arch, symIdx, relocs, i+decodetypeFuncInCount(arch, ldr.Data(symIdx)))
-}
-
-func decodetypeArrayElem(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym) loader.Sym {
-	relocs := ldr.Relocs(symIdx)
-	return decodeRelocSym(ldr, symIdx, &relocs, int32(commonsize(arch))) // 0x1c / 0x30
-}
-
-func decodetypeArrayLen(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym) int64 {
-	data := ldr.Data(symIdx)
-	return int64(decodeInuxi(arch, data[commonsize(arch)+2*arch.PtrSize:], arch.PtrSize))
-}
-
-func decodetypeChanElem(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym) loader.Sym {
-	relocs := ldr.Relocs(symIdx)
-	return decodeRelocSym(ldr, symIdx, &relocs, int32(commonsize(arch))) // 0x1c / 0x30
-}
-
-func decodetypeMapKey(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym) loader.Sym {
-	relocs := ldr.Relocs(symIdx)
-	return decodeRelocSym(ldr, symIdx, &relocs, int32(commonsize(arch))) // 0x1c / 0x30
-}
-
-func decodetypeMapValue(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym) loader.Sym {
-	relocs := ldr.Relocs(symIdx)
-	return decodeRelocSym(ldr, symIdx, &relocs, int32(commonsize(arch))+int32(arch.PtrSize)) // 0x20 / 0x38
-}
-
-func decodetypePtrElem(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym) loader.Sym {
-	relocs := ldr.Relocs(symIdx)
-	return decodeRelocSym(ldr, symIdx, &relocs, int32(commonsize(arch))) // 0x1c / 0x30
-}
-
-func decodetypeStructFieldCount(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym) int {
-	data := ldr.Data(symIdx)
-	return int(decodeInuxi(arch, data[commonsize(arch)+2*arch.PtrSize:], arch.PtrSize))
-}
-
-func decodetypeStructFieldArrayOff(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym, i int) int {
-	data := ldr.Data(symIdx)
-	off := commonsize(arch) + 4*arch.PtrSize
-	if decodetypeHasUncommon(arch, data) {
-		off += uncommonSize()
-	}
-	off += i * structfieldSize(arch)
-	return off
-}
-
-func decodetypeStructFieldName(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym, i int) string {
-	off := decodetypeStructFieldArrayOff(ldr, arch, symIdx, i)
-	relocs := ldr.Relocs(symIdx)
-	return decodetypeName(ldr, symIdx, &relocs, off)
-}
-
-func decodetypeStructFieldType(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym, i int) loader.Sym {
-	off := decodetypeStructFieldArrayOff(ldr, arch, symIdx, i)
-	relocs := ldr.Relocs(symIdx)
-	return decodeRelocSym(ldr, symIdx, &relocs, int32(off+arch.PtrSize))
-}
-
-func decodetypeStructFieldOffsAnon(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym, i int) int64 {
-	off := decodetypeStructFieldArrayOff(ldr, arch, symIdx, i)
-	data := ldr.Data(symIdx)
-	return int64(decodeInuxi(arch, data[off+2*arch.PtrSize:], arch.PtrSize))
 }
 
 // decodetypeStr returns the contents of an rtype's str field (a nameOff).

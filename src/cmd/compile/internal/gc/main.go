@@ -264,6 +264,11 @@ func Main(archInit func(*ssagen.ArchInfo)) {
 	// This must be before CompileITabs, because CompileITabs
 	// can trigger function compilation.
 	typecheck.InitRuntime()
+	if base.Flag.Dwarf {
+		base.Ctxt.LookupDwPredefined = reflectdata.LookupDwPredefined
+		dwarfgen.PredefinedDwarfType()
+	}
+
 	ssagen.InitConfig()
 
 	// Just before compilation, compile itabs found on
@@ -303,6 +308,9 @@ func Main(archInit func(*ssagen.ArchInfo)) {
 	// Write object data to disk.
 	base.Timer.Start("be", "dumpobj")
 	dumpdata()
+	if base.Flag.Dwarf {
+		base.Ctxt.DumpDwarfTypes()
+	}
 	base.Ctxt.NumberSyms()
 	dumpobj()
 	if base.Flag.AsmHdr != "" {

@@ -12,6 +12,7 @@ import (
 	"cmd/internal/src"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -243,7 +244,16 @@ func (c dwCtxt) AddCURelativeAddress(s dwarf.Sym, data interface{}, value int64)
 	ls.WriteCURelativeAddr(c.Link, ls.Size, rsym, value)
 }
 func (c dwCtxt) AddSectionOffset(s dwarf.Sym, size int, t interface{}, ofs int64) {
-	panic("should be used only in the linker")
+	ds := s.(*LSym)
+	tds := t.(*LSym)
+	switch size {
+	default:
+		c.Diag("invalid size %d in adddwarfref\n", size)
+	case c.PtrSize(), 4:
+	}
+	ds.WriteAddr(c.Link, ds.Size, size, tds, ofs)
+	r := &ds.R[len(ds.R)-1]
+	r.Type = objabi.R_WEAKADDROFF
 }
 func (c dwCtxt) AddDWARFAddrSectionOffset(s dwarf.Sym, t interface{}, ofs int64) {
 	size := 4
@@ -271,6 +281,71 @@ func (c dwCtxt) AddFileRef(s dwarf.Sym, f interface{}) {
 func (c dwCtxt) CurrentOffset(s dwarf.Sym) int64 {
 	ls := s.(*LSym)
 	return ls.Size
+}
+
+func (c dwCtxt) LookupOrCreateDwarfSym(die *dwarf.DWDie, name string, st objabi.SymKind, internal bool) dwarf.Sym {
+	if internal {
+		s := c.Link.Lookup(dwarf.InfoPrefix + name)
+		if s.Type == st {
+			return s
+		}
+		// when mkinternal, the symbol is always for unnamed pseudo type, mark them dupok.
+		s.Set(AttrDuplicateOK, true)
+		return nil
+	}
+
+	if die.Abbrev == dwarf.DW_ABRV_COMPUNIT || die.Abbrev == dwarf.DW_ABRV_COMPUNIT_TEXTLESS {
+		panic("not support now")
+	}
+
+	ds := c.Link.Lookup(dwarf.InfoPrefix + name)
+	ds.Type = st
+	return ds
+}
+
+func (c dwCtxt) CreateSymForTypedef(def *dwarf.DWDie) dwarf.Sym {
+	ds := &LSym{
+		Type: objabi.SDWARFTYPE,
+	}
+	def.Sym = ds
+	return ds
+}
+
+// DefGoType not really generate a dwarf type info now,
+// it generates a sym for reloc. Only dwarf info of the type defined in
+// current compile unit will be generated.
+func (c dwCtxt) DefGoType(parent *dwarf.DWDie, t dwarf.Type) dwarf.Sym {
+	if c.Flag_linkshared {
+		if c.Pkgpath != "runtime" {
+			name := t.DwarfName(c)
+			if name == "*runtime.g" || name == "*runtime._type" ||
+				name == "*runtime.mapextra" || name == "*runtime.itab" {
+				return PredefinedTypes.Uintptr
+			}
+		}
+		c.populateDwarfTypeWithParent(parent, t, true)
+	}
+	return c.Link.Lookup(dwarf.InfoPrefix + t.Name(c))
+}
+
+func (c dwCtxt) DefPtrTo(parent *dwarf.DWDie, dwtype dwarf.Sym) dwarf.Sym {
+	ptrname := "*" + dwtype.(*LSym).Name[len(dwarf.InfoPrefix):]
+	sym := c.Link.Lookup(dwarf.InfoPrefix + ptrname)
+
+	// The named ptr type is always defined by PopulateDWARFType.
+	// It is always unnamed ptr type here.
+	sym.Set(AttrDuplicateOK, true)
+
+	if sym.Type == objabi.SDWARFTYPE {
+		return sym
+	}
+	dwarfname := strings.Replace(ptrname, `"".`, objabi.PathToPrefix(c.Pkgpath)+".", -1)
+	pdie := dwarf.NewDie(parent, dwarf.DW_ABRV_PTRTYPE, ptrname, dwarfname, c)
+	dwarf.NewRefAttr(pdie, dwarf.DW_AT_type, dwtype)
+	// not a good way to lookup by type name.
+	dwarf.NewAttr(pdie, dwarf.DW_AT_go_runtime_type, dwarf.DW_CLS_GO_TYPEREF, 0, c.Link.Lookup("type."+ptrname))
+	dwarf.NewAttr(pdie, dwarf.DW_AT_go_kind, dwarf.DW_CLS_CONSTANT, objabi.KindPtr, 0)
+	return sym
 }
 
 // Here "from" is a symbol corresponding to an inlined or concrete
@@ -327,6 +402,10 @@ func (ctxt *Link) dwarfSym(s *LSym) (dwarfInfoSym, dwarfLocSym, dwarfRangesSym, 
 
 func (s *LSym) Length(dwarfContext interface{}) int64 {
 	return s.Size
+}
+
+func (s *LSym) Invalid() bool {
+	return s == nil
 }
 
 // fileSymbol returns a symbol corresponding to the source file of the
@@ -391,7 +470,7 @@ func (ctxt *Link) populateDWARF(curfn interface{}, s *LSym, myimportpath string)
 
 // DwarfIntConst creates a link symbol for an integer constant with the
 // given name, type and value.
-func (ctxt *Link) DwarfIntConst(myimportpath, name, typename string, val int64) {
+func (ctxt *Link) DwarfIntConst(myimportpath, name string, typeSym *LSym, val int64) {
 	if myimportpath == "" {
 		return
 	}
@@ -399,12 +478,12 @@ func (ctxt *Link) DwarfIntConst(myimportpath, name, typename string, val int64) 
 		s.Type = objabi.SDWARFCONST
 		ctxt.Data = append(ctxt.Data, s)
 	})
-	dwarf.PutIntConst(dwCtxt{ctxt}, s, ctxt.Lookup(dwarf.InfoPrefix+typename), myimportpath+"."+name, val)
+	dwarf.PutIntConst(dwCtxt{ctxt}, s, typeSym, myimportpath+"."+name, val)
 }
 
 // DwarfGlobal creates a link symbol containing a DWARF entry for
 // a global variable.
-func (ctxt *Link) DwarfGlobal(myimportpath, typename string, varSym *LSym) {
+func (ctxt *Link) DwarfGlobal(myimportpath string, typeSym, varSym *LSym) {
 	if myimportpath == "" || varSym.Local() {
 		return
 	}
@@ -423,7 +502,6 @@ func (ctxt *Link) DwarfGlobal(myimportpath, typename string, varSym *LSym) {
 		s.Set(AttrDuplicateOK, true) // needed for shared linkage
 		ctxt.Data = append(ctxt.Data, s)
 	})
-	typeSym := ctxt.Lookup(dwarf.InfoPrefix + typename)
 	dwarf.PutGlobal(dwCtxt{ctxt}, dieSym, typeSym, varSym, varname)
 }
 
@@ -715,3 +793,84 @@ type BySymName []*LSym
 func (s BySymName) Len() int           { return len(s) }
 func (s BySymName) Less(i, j int) bool { return s[i].Name < s[j].Name }
 func (s BySymName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+var PredefinedTypes dwarf.FixTypes
+
+func (ctxt *Link) PopulateDWARFType(typ dwarf.Type, dupok bool) {
+	ctxt.populateDwarfTypeWithParent(&ctxt.dwtypes, typ, dupok)
+
+}
+
+func (ctxt *Link) populateDwarfTypeWithParent(parent *dwarf.DWDie, typ dwarf.Type, dupok bool) {
+	dwctxt := dwCtxt{ctxt}
+	dwsym := ctxt.Lookup(dwarf.InfoPrefix + typ.Name(dwctxt))
+	if dwsym.Type == objabi.SDWARFTYPE {
+		// todo: Already define, How does this happen?
+		return
+	}
+	if dupok {
+		dwsym.Set(AttrDuplicateOK, true)
+	}
+
+	def, _, err := dwarf.NewType(typ, dwctxt, PredefinedTypes, parent)
+	if err != nil {
+		ctxt.Diag(err.Error())
+		return
+	}
+	dwarf.NewAttr(def, dwarf.DW_AT_go_runtime_type, dwarf.DW_CLS_GO_TYPEREF, 0, typ.RuntimeType(dwctxt))
+}
+
+func (ctxt *Link) DumpDwarfTypes() {
+	dwctxt := dwCtxt{ctxt}
+	// We don't expect this type in the package out of runtime.
+	// So use another temp root, we can avoid dumping them when dwtypes is traversed.
+	// when compiling runtime, they can be dumped by the real runtime package.
+	prototypeRoot := new(dwarf.DWDie)
+	lookupPrototype := func(name string) *dwarf.DWDie {
+		t := ctxt.LookupDwPredefined(name)
+		dwsym := ctxt.Lookup(dwarf.InfoPrefix + t.Name(dwctxt))
+		dwsym.Set(AttrDuplicateOK, true)
+		die, _, err := dwarf.NewType(t, dwctxt, PredefinedTypes, prototypeRoot)
+		if err != nil {
+			ctxt.Diag(err.Error())
+			return nil
+		}
+		dwarf.NewAttr(die, dwarf.DW_AT_go_runtime_type, dwarf.DW_CLS_GO_TYPEREF, 0, t.RuntimeType(dwctxt))
+		return die
+	}
+	dwarf.SynthesizeStringTypes(dwctxt, &dwctxt.dwtypes, lookupPrototype)
+	dwarf.SynthesizeSliceTypes(dwctxt, &dwctxt.dwtypes, lookupPrototype)
+	dwarf.SynthesizeMapTypes(dwctxt, &dwctxt.dwtypes, lookupPrototype, PredefinedTypes.Uintptr, ctxt.Arch.Arch)
+	dwarf.SynthesizeChanTypes(dwctxt, &dwctxt.dwtypes, lookupPrototype)
+	dwarf.ReverseTree(&dwctxt.dwtypes.Child)
+	for die := dwctxt.dwtypes.Child; die != nil; die = die.Link {
+		ctxt.Data = ctxt.putdie(ctxt.Data, die)
+	}
+	if ctxt.Flag_linkshared && prototypeRoot != nil && ctxt.Pkgpath != "runtime" {
+		dwarf.ReverseTree(&prototypeRoot.Child)
+		for die := prototypeRoot.Child; die != nil; die = die.Link {
+			ctxt.Data = ctxt.putdie(ctxt.Data, die)
+		}
+	}
+}
+
+// todo: unify putdie with linker
+func (ctxt *Link) putdie(syms []*LSym, die *dwarf.DWDie) []*LSym {
+	dwctxt := dwCtxt{ctxt}
+	s := die.Sym
+	if s == nil {
+		s = syms[len(syms)-1]
+	} else {
+		syms = append(syms, s.(*LSym))
+	}
+	dwarf.Uleb128put(dwctxt, s, int64(die.Abbrev))
+	dwarf.PutAttrs(dwctxt, s, die.Abbrev, die.Attr)
+	if dwarf.HasChildren(die) {
+		for die := die.Child; die != nil; die = die.Link {
+			syms = dwctxt.putdie(syms, die)
+		}
+		lastsym := syms[len(syms)-1]
+		lastsym.WriteInt(ctxt, lastsym.Size, 1, 0)
+	}
+	return syms
+}

@@ -39,6 +39,7 @@ func main() {
 	fmt.Fprintln(&b, `import (`)
 	fmt.Fprintln(&b, `      "cmd/compile/internal/types"`)
 	fmt.Fprintln(&b, `      "cmd/internal/src"`)
+	fmt.Fprintln(&b, `      "cmd/compile/internal/ir"`)
 	fmt.Fprintln(&b, `)`)
 
 	mkbuiltin(&b, "runtime")
@@ -84,18 +85,24 @@ func mkbuiltin(w io.Writer, name string) {
 				}
 				continue
 			}
-			if decl.Tok != token.VAR {
-				log.Fatal("unhandled declaration kind", decl.Tok)
+			if decl.Tok != token.VAR && decl.Tok != token.TYPE {
+				log.Fatal("unhandled declaration kind ", decl.Tok)
 			}
 			for _, spec := range decl.Specs {
-				spec := spec.(*ast.ValueSpec)
-				if len(spec.Values) != 0 {
-					log.Fatal("unexpected values")
+				if spec, ok := spec.(*ast.ValueSpec); ok {
+					if len(spec.Values) != 0 {
+						log.Fatal("unexpected values")
+					}
+					idx := interner.intern(spec.Type)
+					for _, name := range spec.Names {
+						fmt.Fprintf(w, "{%q,varTag, %d},\n", name.Name, idx)
+					}
 				}
-				typ := interner.intern(spec.Type)
-				for _, name := range spec.Names {
-					fmt.Fprintf(w, "{%q, varTag, %d},\n", name.Name, typ)
+				if spec, ok := spec.(*ast.TypeSpec); ok {
+					typ := interner.intern(spec.Type)
+					fmt.Fprintf(w, "{%q, typeTag, %d},\n", spec.Name.Name, typ)
 				}
+
 			}
 		default:
 			log.Fatal("unhandled decl type", decl)
@@ -108,6 +115,13 @@ func mkbuiltin(w io.Writer, name string) {
 //go:noinline
 func newSig(params, results []*types.Field) *types.Type {
 	return types.NewSignature(types.NoPkg, nil, nil, params, results)
+}
+
+func newNamed(name string, typ *types.Type) *types.Type {
+	n := importtype(src.NoXPos, ir.Pkgs.Runtime.Lookup(name))
+	n.Type().SetUnderlying(typ)
+	types.CalcSize(n.Type())
+	return n.Type()
 }
 
 func params(tlist ...*types.Type) []*types.Field {
@@ -163,7 +177,10 @@ func (i *typeInterner) mktype(t ast.Expr) string {
 		case "rune":
 			return "types.RuneType"
 		}
-		return fmt.Sprintf("types.Types[types.T%s]", strings.ToUpper(t.Name))
+		if t.Obj == nil {
+			return fmt.Sprintf("types.Types[types.T%s]", strings.ToUpper(t.Name))
+		}
+		return fmt.Sprintf("newNamed(%q,%s)", t.Name, i.subtype(t.Obj.Decl.(*ast.TypeSpec).Type))
 	case *ast.SelectorExpr:
 		if t.X.(*ast.Ident).Name != "unsafe" || t.Sel.Name != "Pointer" {
 			log.Fatalf("unhandled type: %#v", t)
@@ -213,7 +230,11 @@ func (i *typeInterner) fields(fl *ast.FieldList, keepNames bool) string {
 	for _, f := range fl.List {
 		typ := i.subtype(f.Type)
 		if len(f.Names) == 0 {
-			res = append(res, typ)
+			if keepNames {
+				res = append(res, fmt.Sprintf("types.NewField(src.NoXPos, Lookup(%q), %s)", f.Type, typ))
+			} else {
+				res = append(res, typ)
+			}
 		} else {
 			for _, name := range f.Names {
 				if keepNames {
