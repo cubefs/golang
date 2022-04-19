@@ -150,14 +150,44 @@ func lookup(p *Plugin, symName string) (Symbol, error) {
 	return nil, errors.New("plugin: symbol " + symName + " not found in plugin " + p.pluginpath)
 }
 
-func closePlug(h uint32) error {
+func closePlug(name string) error {
+	cPath := make([]byte, C.PATH_MAX+1)
+	cRelName := make([]byte, len(name)+1)
+	copy(cRelName, name)
+	if C.realpath(
+		(*C.char)(unsafe.Pointer(&cRelName[0])),
+		(*C.char)(unsafe.Pointer(&cPath[0]))) == nil {
+		return errors.New(`plugin.Close("` + name + `"): realpath failed`)
+	}
+
+	filepath := C.GoString((*C.char)(unsafe.Pointer(&cPath[0])))
+	pluginsMu.Lock()
+	p := plugins[filepath]
+	pluginsMu.Unlock()
+	if p == nil {
+		return errors.New(`plugin.Close("` + name + `"): plugin not opened`)
+	}
+
+	var cErr *C.char
+	finiStr := make([]byte, len(p.pluginpath)+len("..finitask")+1) // +1 for terminating NUL
+	copy(finiStr, p.pluginpath)
+	copy(finiStr[len(p.pluginpath):], "..finitask")
+
+	finiTask := C.pluginLookup(C.ulong(p.handle), (*C.char)(unsafe.Pointer(&finiStr[0])), &cErr)
+	if finiTask != nil {
+		doFini(finiTask)
+	}
+
 	removeLastModuleitabs()
 	removeLastModule()
-	var cErr *C.char
-	C.pluginClose(C.ulong(h), &cErr)
+
+	C.pluginClose(C.ulong(p.handle), &cErr)
 	if cErr != nil {
 		return errors.New("closePlug: " + C.GoString(cErr))
 	}
+	pluginsMu.Lock()
+	delete(plugins, filepath)
+	pluginsMu.Unlock()
 	return nil
 }
 
@@ -174,3 +204,6 @@ func removeLastModule()
 // doInit is defined in package runtime
 //go:linkname doInit runtime.doInit
 func doInit(t unsafe.Pointer) // t should be a *runtime.initTask
+
+//go:linkname doFini runtime.doFini
+func doFini(t unsafe.Pointer) // t should be a *runtime.finiTask

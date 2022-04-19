@@ -54,7 +54,7 @@ func (d *deadcodePass) init() {
 	// In a normal binary, start at main.main and the init
 	// functions and mark what is reachable from there.
 	if d.ctxt.linkShared && (d.ctxt.BuildMode == BuildModeExe || d.ctxt.BuildMode == BuildModePIE) {
-		names = append(names, "main.main", "main..inittask")
+		names = append(names, "main.main", "main..inittask", "main..finitask")
 	} else {
 		// The external linker refers main symbol directly.
 		if d.ctxt.LinkMode == LinkExternal && (d.ctxt.BuildMode == BuildModeExe || d.ctxt.BuildMode == BuildModePIE) {
@@ -76,7 +76,7 @@ func (d *deadcodePass) init() {
 		names = append(names, "runtime.buildVersion", "runtime.modinfo")
 	}
 	if d.ctxt.BuildMode == BuildModePlugin {
-		names = append(names, objabi.PathToPrefix(*flagPluginPath)+"..inittask", objabi.PathToPrefix(*flagPluginPath)+".main", "go.plugin.tabs", *flagEntrySymbol)
+		names = append(names, objabi.PathToPrefix(*flagPluginPath)+"..inittask", objabi.PathToPrefix(*flagPluginPath)+"..finitask", objabi.PathToPrefix(*flagPluginPath)+".main", "go.plugin.tabs", *flagEntrySymbol)
 
 		// We don't keep the go.plugin.exports symbol,
 		// but we do keep the symbols it refers to.

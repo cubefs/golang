@@ -145,3 +145,13 @@ func decompressor(method uint16) Decompressor {
 	}
 	return di.(Decompressor)
 }
+
+func fini() {
+	compressors = sync.Map{}
+	compressors.Store(Store, Compressor(func(w io.Writer) (io.WriteCloser, error) { return &nopCloser{w}, nil }))
+	compressors.Store(Deflate, Compressor(func(w io.Writer) (io.WriteCloser, error) { return newFlateWriter(w), nil }))
+
+	decompressors = sync.Map{}
+	decompressors.Store(Store, Decompressor(io.NopCloser))
+	decompressors.Store(Deflate, Decompressor(newFlateReader))
+}

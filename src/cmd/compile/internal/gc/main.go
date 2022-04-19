@@ -16,6 +16,7 @@ import (
 	"cmd/compile/internal/ir"
 	"cmd/compile/internal/logopt"
 	"cmd/compile/internal/noder"
+	"cmd/compile/internal/pkgfini"
 	"cmd/compile/internal/pkginit"
 	"cmd/compile/internal/reflectdata"
 	"cmd/compile/internal/ssa"
@@ -196,6 +197,10 @@ func Main(archInit func(*ssagen.ArchInfo)) {
 	// Build init task.
 	if initTask := pkginit.Task(); initTask != nil {
 		typecheck.Export(initTask)
+	}
+
+	if finiTask := pkgfini.Task(); finiTask != nil {
+		typecheck.Export(finiTask)
 	}
 
 	// Eliminate some obviously dead code.

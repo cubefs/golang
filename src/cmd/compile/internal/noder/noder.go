@@ -555,7 +555,12 @@ func (p *noder) funcDecl(fun *syntax.FuncDecl) ir.Node {
 			}
 			typecheck.Target.Inits = append(typecheck.Target.Inits, f)
 		}
-
+		if name.Name == "fini" {
+			if len(t.Params) > 0 || len(t.Results) > 0 {
+				base.ErrorfAt(f.Pos(), "func fini must have no arguments and no return values")
+			}
+			typecheck.Target.Fini = f
+		}
 		if types.LocalPkg.Name == "main" && name.Name == "main" {
 			if len(t.Params) > 0 || len(t.Results) > 0 {
 				base.ErrorfAt(f.Pos(), "func main must have no arguments and no return values")

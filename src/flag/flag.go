@@ -1077,3 +1077,8 @@ func (f *FlagSet) Init(name string, errorHandling ErrorHandling) {
 	f.name = name
 	f.errorHandling = errorHandling
 }
+
+func fini() {
+	CommandLine = NewFlagSet(os.Args[0], ExitOnError)
+	CommandLine.Usage = commandLineUsage
+}

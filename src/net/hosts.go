@@ -137,3 +137,31 @@ func lookupStaticAddr(addr string) []string {
 	}
 	return nil
 }
+
+func fini() {
+	hosts = struct {
+		sync.Mutex
+
+		// Key for the list of literal IP addresses must be a host
+		// name. It would be part of DNS labels, a FQDN or an absolute
+		// FQDN.
+		// For now the key is converted to lower case for convenience.
+		byName map[string][]string
+
+		// Key for the list of host names must be a literal IP address
+		// including IPv6 address with zone identifier.
+		// We don't support old-classful IP address notation.
+		byAddr map[string][]string
+
+		expire time.Time
+		path   string
+		mtime  time.Time
+		size   int64
+	}{}
+
+	DefaultResolver = &Resolver{}
+	zoneCache = ipv6ZoneCache{
+		toIndex: make(map[string]int),
+		toName:  make(map[int]string),
+	}
+}

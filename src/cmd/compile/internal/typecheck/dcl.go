@@ -50,6 +50,9 @@ func Declare(n *ir.Name, ctxt ir.Class) {
 		if s.Name == "init" {
 			base.ErrorfAt(n.Pos(), "cannot declare init - must be func")
 		}
+		if s.Name == "fini" {
+			base.ErrorfAt(n.Pos(), "cannot declare fini - must be func")
+		}
 		if s.Name == "main" && s.Pkg.Name == "main" {
 			base.ErrorfAt(n.Pos(), "cannot declare main - must be func")
 		}
@@ -266,7 +269,7 @@ func autoexport(n *ir.Name, ctxt ir.Class) {
 		return
 	}
 
-	if types.IsExported(n.Sym().Name) || n.Sym().Name == "init" {
+	if types.IsExported(n.Sym().Name) || n.Sym().Name == "init" || n.Sym().Name == "fini" {
 		Export(n)
 	}
 	if base.Flag.AsmHdr != "" && !n.Sym().Asm() {

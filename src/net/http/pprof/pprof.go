@@ -447,3 +447,11 @@ Profile Descriptions:
 	_, err := w.Write(b.Bytes())
 	return err
 }
+
+func fini() {
+	http.HandleFunc("/debug/pprof/", Index)
+	http.HandleFunc("/debug/pprof/cmdline", Cmdline)
+	http.HandleFunc("/debug/pprof/profile", Profile)
+	http.HandleFunc("/debug/pprof/symbol", Symbol)
+	http.HandleFunc("/debug/pprof/trace", Trace)
+}
