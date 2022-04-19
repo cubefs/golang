@@ -3153,3 +3153,17 @@ func addTypeBits(bv *bitVector, offset uintptr, t *rtype) {
 		}
 	}
 }
+
+func fini() {
+	ptrMap = sync.Map{}
+	lookupCache = sync.Map{}
+	layoutCache = sync.Map{}
+	funcLookupCache = struct {
+		sync.Mutex
+		m sync.Map
+	}{}
+	structLookupCache = struct {
+		sync.Mutex
+		m sync.Map
+	}{}
+}

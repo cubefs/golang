@@ -222,7 +222,8 @@ func (st *relocSymState) relocsym(s loader.Sym, P []byte) {
 				sb.SetType(sym.SDYNIMPORT)
 			}
 			if target.IsShared() || target.IsPlugin() {
-				if ldr.SymName(rs) == "main.main" || (!target.IsPlugin() && ldr.SymName(rs) == "main..inittask") {
+				if ldr.SymName(rs) == "main.main" || (!target.IsPlugin() && ldr.SymName(rs) == "main..inittask") ||
+					(!target.IsPlugin() && ldr.SymName(rs) == "main..finitask") {
 					sb := ldr.MakeSymbolUpdater(rs)
 					sb.SetType(sym.SDYNIMPORT)
 				} else if strings.HasPrefix(ldr.SymName(rs), "go.info.") {

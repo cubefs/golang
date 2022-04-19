@@ -3395,3 +3395,7 @@ func withLock(lk sync.Locker, fn func()) {
 	defer lk.Unlock() // in case fn panics
 	fn()
 }
+
+func fini() {
+	unregisterAllDrivers()
+}

@@ -378,3 +378,7 @@ func Panicln(v ...interface{}) {
 func Output(calldepth int, s string) error {
 	return std.Output(calldepth+1, s) // +1 for this frame.
 }
+
+func fini() {
+	std = New(os.Stderr, "", LstdFlags)
+}

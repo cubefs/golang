@@ -14,6 +14,7 @@ type Package struct {
 
 	// Init functions, listed in source order.
 	Inits []*Func
+	Fini  *Func
 
 	// Top-level declarations.
 	Decls []Node

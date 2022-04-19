@@ -292,3 +292,11 @@ func runtime_LoadAcquintptr(ptr *uintptr) uintptr
 
 //go:linkname runtime_StoreReluintptr runtime/internal/atomic.StoreReluintptr
 func runtime_StoreReluintptr(ptr *uintptr, val uintptr) uintptr
+
+func fini() {
+	//	poolRaceHash = [128]uint64{}
+	//	allPoolsMu = Mutex{}
+	//  allPools = nil
+	runtime.GC()
+	oldPools = nil
+}

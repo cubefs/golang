@@ -365,3 +365,12 @@ func init() {
 	Publish("cmdline", Func(cmdline))
 	Publish("memstats", Func(memstats))
 }
+
+func fini() {
+	vars = sync.Map{}
+	varKeys = nil
+
+	http.HandleFunc("/debug/vars", expvarHandler)
+	Publish("cmdline", Func(cmdline))
+	Publish("memstats", Func(memstats))
+}

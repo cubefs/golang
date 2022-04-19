@@ -41,8 +41,8 @@ func (p *Plugin) Lookup(symName string) (Symbol, error) {
 	return lookup(p, symName)
 }
 
-func (p *Plugin) Close() error {
-	return closePlug(p.handle)
+func Close(path string) error {
+	return closePlug(path)
 }
 
 // A Symbol is a pointer to a variable or function.

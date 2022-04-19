@@ -735,3 +735,7 @@ func intDataSize(data interface{}) int {
 	}
 	return 0
 }
+
+func fini() {
+	structSize = sync.Map{}
+}

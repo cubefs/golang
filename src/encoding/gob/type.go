@@ -911,3 +911,55 @@ func registerBasics() {
 	Register([]bool(nil))
 	Register([]string(nil))
 }
+
+func fini() {
+	nextId = 0
+	userTypeCache = sync.Map{}
+	types = nil
+	idToType = nil
+	types = make(map[reflect.Type]gobType)
+	idToType = make(map[typeId]gobType)
+	builtinIdToType = make(map[typeId]gobType)
+	wireTypeUserInfo = nil
+	typeInfoMap = atomic.Value{}
+	nameToConcreteType = sync.Map{}
+	concreteTypeToName = sync.Map{}
+
+	tBool = bootstrapType("bool", (*bool)(nil), 1)
+	tInt = bootstrapType("int", (*int)(nil), 2)
+	tUint = bootstrapType("uint", (*uint)(nil), 3)
+	tFloat = bootstrapType("float", (*float64)(nil), 4)
+	tBytes = bootstrapType("bytes", (*[]byte)(nil), 5)
+	tString = bootstrapType("string", (*string)(nil), 6)
+	tComplex = bootstrapType("complex", (*complex128)(nil), 7)
+	tInterface = bootstrapType("interface", (*interface{})(nil), 8)
+	// Reserve some Ids for compatible expansion
+	tReserved7 = bootstrapType("_reserved1", (*struct{ r7 int })(nil), 9)
+	tReserved6 = bootstrapType("_reserved1", (*struct{ r6 int })(nil), 10)
+	tReserved5 = bootstrapType("_reserved1", (*struct{ r5 int })(nil), 11)
+	tReserved4 = bootstrapType("_reserved1", (*struct{ r4 int })(nil), 12)
+	tReserved3 = bootstrapType("_reserved1", (*struct{ r3 int })(nil), 13)
+	tReserved2 = bootstrapType("_reserved1", (*struct{ r2 int })(nil), 14)
+	tReserved1 = bootstrapType("_reserved1", (*struct{ r1 int })(nil), 15)
+	tWireType = mustGetTypeInfo(reflect.TypeOf(wireType{})).id
+	checkId(16, tWireType)
+	checkId(17, mustGetTypeInfo(reflect.TypeOf(arrayType{})).id)
+	checkId(18, mustGetTypeInfo(reflect.TypeOf(CommonType{})).id)
+	checkId(19, mustGetTypeInfo(reflect.TypeOf(sliceType{})).id)
+	checkId(20, mustGetTypeInfo(reflect.TypeOf(structType{})).id)
+	checkId(21, mustGetTypeInfo(reflect.TypeOf(fieldType{})).id)
+	checkId(23, mustGetTypeInfo(reflect.TypeOf(mapType{})).id)
+
+	for k, v := range idToType {
+		builtinIdToType[k] = v
+	}
+
+	// Move the id space upwards to allow for growth in the predefined world
+	// without breaking existing files.
+	if nextId > firstUserId {
+		panic(fmt.Sprintln("nextId too large:", nextId))
+	}
+	nextId = firstUserId
+	registerBasics()
+	wireTypeUserInfo = userType(reflect.TypeOf((*wireType)(nil)))
+}

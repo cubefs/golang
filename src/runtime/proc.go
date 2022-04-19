@@ -6522,3 +6522,36 @@ func doInit(t *initTask) {
 		t.state = 2 // initialization done
 	}
 }
+
+type finiTask struct {
+	ndeps uintptr
+	nfns  uintptr
+	// followed by ndeps instances of an *finiTask, one per package depended on
+	// followed by nfns pcs, one per fini function to run
+}
+
+func dofini(t *finiTask, visited map[*finiTask]bool) {
+	if visited[t] {
+		return
+	}
+	for i := uintptr(0); i < t.ndeps; i++ {
+		p := add(unsafe.Pointer(t), (2+i)*sys.PtrSize)
+		t2 := *(**finiTask)(p)
+		dofini(t2, visited)
+	}
+
+	if t.nfns == 0 {
+		visited[t] = true
+		return
+	}
+
+	finiFunc := add(unsafe.Pointer(t), (2+t.ndeps)*sys.PtrSize)
+	f := *(*func())(unsafe.Pointer(&finiFunc))
+	f()
+	visited[t] = true
+}
+
+func doFini(t *finiTask) {
+	visited := make(map[*finiTask]bool)
+	dofini(t, visited)
+}

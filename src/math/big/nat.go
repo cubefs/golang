@@ -1242,3 +1242,10 @@ func (z nat) sqrt(x nat) nat {
 		z1, z2 = z2, z1
 	}
 }
+
+func fini() {
+	cacheBase10 = struct {
+		sync.Mutex
+		table [64]divisor
+	}{}
+}
