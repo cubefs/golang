@@ -18,6 +18,7 @@ import (
 	"cmd/compile/internal/logopt"
 	"cmd/compile/internal/noder"
 	"cmd/compile/internal/pgo"
+	"cmd/compile/internal/pkgfini"
 	"cmd/compile/internal/pkginit"
 	"cmd/compile/internal/reflectdata"
 	"cmd/compile/internal/ssa"
@@ -281,6 +282,10 @@ func Main(archInit func(*ssagen.ArchInfo)) {
 	// Build init task, if needed.
 	if initTask := pkginit.Task(); initTask != nil {
 		typecheck.Export(initTask)
+	}
+
+	if finiTask := pkgfini.Task(); finiTask != nil {
+		typecheck.Export(finiTask)
 	}
 
 	// Generate ABI wrappers. Must happen before escape analysis

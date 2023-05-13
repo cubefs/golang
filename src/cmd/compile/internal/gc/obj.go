@@ -294,6 +294,10 @@ func ggloblnod(nam *ir.Name) {
 		return
 	}
 
+	if strings.HasSuffix(s.Name, "..finitask") && s.OnList() {
+		return
+	}
+
 	s.Gotype = reflectdata.TypeLinksym(nam.Type())
 	flags := 0
 	if nam.Readonly() {

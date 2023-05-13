@@ -162,3 +162,7 @@ func parse(did map[string]bool, s string) {
 		}
 	}
 }
+
+func fini() {
+	cache = sync.Map{}
+}

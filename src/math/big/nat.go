@@ -1427,3 +1427,10 @@ func (z nat) subMod2N(x, y nat, n uint) nat {
 	z = z.trunc(z, n)
 	return z.add(z, natOne)
 }
+
+func fini() {
+	cacheBase10 = struct {
+		sync.Mutex
+		table [64]divisor
+	}{}
+}

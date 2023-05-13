@@ -372,3 +372,7 @@ func (finfo *fieldInfo) value(v reflect.Value, shouldInitNilPointers bool) refle
 	}
 	return v
 }
+
+func fini() {
+	tinfoMap = sync.Map{}
+}

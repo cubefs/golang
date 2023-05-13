@@ -99,3 +99,8 @@ func statUnix(fi fs.FileInfo, h *Header) error {
 	}
 	return nil
 }
+
+func fini() {
+	userMap = sync.Map{}
+	groupMap = sync.Map{}
+}

@@ -723,3 +723,7 @@ func (server *Server) HandleHTTP(rpcPath, debugPath string) {
 func HandleHTTP() {
 	DefaultServer.HandleHTTP(DefaultRPCPath, DefaultDebugPath)
 }
+
+func fini() {
+	DefaultServer = NewServer()
+}

@@ -802,3 +802,7 @@ func intDataSize(data any) int {
 	}
 	return 0
 }
+
+func fini() {
+	structSize = sync.Map{}
+}

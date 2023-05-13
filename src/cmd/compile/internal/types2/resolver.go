@@ -97,6 +97,10 @@ func (check *Checker) declarePkgObj(ident *syntax.Name, obj Object, d *declInfo)
 		return
 	}
 
+	if ident.Value == "fini" {
+		check.error(ident, InvalidFiniDecl, "cannot declare fini - must be func")
+		return
+	}
 	// spec: "The main package must have package name main and declare
 	// a function main that takes no arguments and returns no value."
 	if ident.Value == "main" && check.pkg.name == "main" {
@@ -271,6 +275,10 @@ func (check *Checker) collectObjects() {
 					check.error(s, InvalidInitDecl, "cannot import package as init - init must be a func")
 					continue
 				}
+				if name == "fini" {
+					check.error(s, InvalidFiniDecl, "cannot import package as fini - fini must be a func")
+					continue
+				}
 
 				// add package to list of explicit imports
 				// (this functionality is provided as a convenience
@@ -418,8 +426,11 @@ func (check *Checker) collectObjects() {
 				hasTParamError := false // avoid duplicate type parameter errors
 				if s.Recv == nil {
 					// regular function
-					if name == "init" || name == "main" && pkg.name == "main" {
+					if name == "init" || name == "fini" || name == "main" && pkg.name == "main" {
 						code := InvalidInitDecl
+						if name == "fini" {
+							code = InvalidFiniDecl
+						}
 						if name == "main" {
 							code = InvalidMainDecl
 						}
@@ -432,7 +443,7 @@ func (check *Checker) collectObjects() {
 						}
 					}
 					// don't declare init functions in the package scope - they are invisible
-					if name == "init" {
+					if name == "init" || name == "fini" {
 						obj.parent = pkg.scope
 						check.recordDef(s.Name, obj)
 						// init functions must have a body

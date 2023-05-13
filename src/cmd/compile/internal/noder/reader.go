@@ -3388,6 +3388,9 @@ func (r *reader) pkgObjs(target *ir.Package) []*ir.Name {
 			if strings.HasPrefix(sym.Name, "init.") {
 				target.Inits = append(target.Inits, name.Func)
 			}
+			if sym.Name == "fini" {
+				target.Fini = name.Func
+			}
 		}
 
 		if types.IsExported(sym.Name) {

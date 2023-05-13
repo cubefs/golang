@@ -326,6 +326,14 @@ func readPackage(pr *pkgReader, importpkg *types.Pkg, localStub bool) {
 			sym.Def = task
 		}
 
+		if r.Bool() {
+			if sym := importpkg.Lookup(".finitask"); sym != nil {
+				task := ir.NewNameAt(src.NoXPos, sym)
+				task.Class = ir.PEXTERN
+				sym.Def = task
+			}
+		}
+
 		for i, n := 0, r.Len(); i < n; i++ {
 			path := r.String()
 			name := r.String()
@@ -425,6 +433,7 @@ func writeUnifiedExport(out io.Writer) {
 		w := privateRootWriter
 
 		w.Bool(typecheck.Lookup(".inittask").Def != nil)
+		w.Bool(typecheck.Lookup(".finitask").Def != nil)
 
 		w.Len(len(bodies))
 		for _, body := range bodies {

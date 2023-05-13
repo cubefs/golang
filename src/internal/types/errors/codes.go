@@ -382,6 +382,8 @@ const (
 	//  func init() int { return 1 }
 	InvalidInitDecl
 
+	InvalidFiniDecl
+
 	// InvalidMainDecl occurs when main is declared as anything other than a
 	// function, in a main package.
 	InvalidMainDecl

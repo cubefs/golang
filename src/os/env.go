@@ -139,3 +139,7 @@ func Clearenv() {
 func Environ() []string {
 	return syscall.Environ()
 }
+
+func fini() {
+	Clearenv()
+}

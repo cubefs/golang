@@ -150,6 +150,9 @@ func (g *irgen) funcDecl(out *ir.Nodes, decl *syntax.FuncDecl) {
 	if decl.Name.Value == "init" && decl.Recv == nil {
 		g.target.Inits = append(g.target.Inits, fn)
 	}
+	if decl.Name.Value == "fini" && decl.Recv == nil {
+		g.target.Fini = fn
+	}
 
 	saveHaveEmbed := g.haveEmbed
 	saveCurDecl := g.curDecl
