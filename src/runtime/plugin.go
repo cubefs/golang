@@ -48,12 +48,12 @@ func plugin_lastmoduleinit() (path string, syms map[string]interface{}, errstr s
 			throw("plugin: new module data overlaps with previous moduledata")
 		}
 	}
-	for _, pkghash := range md.pkghashes {
-		if pkghash.linktimehash != *pkghash.runtimehash && pkghash.modulename != "main" {
-			md.bad = true
-			return "", nil, "plugin was built with a different version of package " + pkghash.modulename
-		}
-	}
+	//for _, pkghash := range md.pkghashes {
+	//	if pkghash.linktimehash != *pkghash.runtimehash && pkghash.modulename != "main" {
+	//		md.bad = true
+	//		return "", nil, "plugin was built with a different version of package " + pkghash.modulename
+	//	}
+	//}
 
 	// Initialize the freshly loaded module.
 	modulesinit()
